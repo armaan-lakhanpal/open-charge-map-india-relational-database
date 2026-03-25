@@ -1,0 +1,61 @@
+import json
+import pandas as pd
+
+# Load JSON
+with open("poi.json") as f:
+    data = json.load(f)
+
+stations = []
+units = []
+
+for station in data:
+    
+    address = station.get("AddressInfo", {})
+    
+    # ---- STATION TABLE ----
+    stations.append({
+        "station_id": station.get("ID"),
+        "uuid": station.get("UUID"),
+        "operator_id": station.get("OperatorID"),
+        "usage_type_id": station.get("UsageTypeID"),
+        "usage_cost": station.get("UsageCost"),
+        "name": address.get("Title"),
+        "address": address.get("AddressLine1"),
+        "town": address.get("Town"),
+        "state": address.get("StateOrProvince"),
+        "postcode": address.get("Postcode"),
+        "country_id": address.get("CountryID"),
+        "latitude": address.get("Latitude"),
+        "longitude": address.get("Longitude"),
+        "status_type_id": station.get("StatusTypeID"),
+        "date_created": station.get("DateCreated")
+    })
+    
+    # ---- CONNECTION TABLE ----
+    for conn in station.get("Connections", []):
+        units.append({
+            "connection_id": conn.get("ID"),
+            "station_id": station.get("ID"),
+            "connection_type_id": conn.get("ConnectionTypeID"),
+            "level_id": conn.get("LevelID"),
+            "power_kw": conn.get("PowerKW"),
+            "current_type_id": conn.get("CurrentTypeID"),
+            "quantity": conn.get("Quantity"),
+            "status_type_id": conn.get("StatusTypeID")
+        })
+
+stations_df = pd.DataFrame(stations)
+units_df = pd.DataFrame(units)
+
+# ---- CLEAN STATE COLUMN ----
+stations_df["state"] = stations_df["state"].astype(str).str.strip().str.title()
+
+# Remove duplicates
+stations_df.drop_duplicates(subset=["station_id"], inplace=True)
+units_df.drop_duplicates(subset=["connection_id"], inplace=True)
+
+# Save CSV
+stations_df.to_csv("charging_stations_india.csv", index=False)
+units_df.to_csv("charging_units_india.csv", index=False)
+
+print("Conversion complete.")
